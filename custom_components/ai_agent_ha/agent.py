@@ -546,8 +546,12 @@ class AiAgentHaAgent:
             # Read current automations.yaml using async executor
             automations_path = self.hass.config.path('automations.yaml')
             try:
+                def _load_automations():
+                    with open(automations_path, 'r') as file:
+                        return yaml.safe_load(file) or []
+
                 current_automations = await self.hass.async_add_executor_job(
-                    lambda: yaml.safe_load(open(automations_path, 'r')) or []
+                    _load_automations
                 )
             except FileNotFoundError:
                 current_automations = []
@@ -562,8 +566,12 @@ class AiAgentHaAgent:
             current_automations.append(automation_entry)
             
             # Write back to file using async executor
+            def _write_automations():
+                with open(automations_path, 'w') as file:
+                    yaml.dump(current_automations, file, default_flow_style=False)
+
             await self.hass.async_add_executor_job(
-                lambda: yaml.dump(current_automations, open(automations_path, 'w'), default_flow_style=False)
+                _write_automations
             )
             
             # Reload automations
