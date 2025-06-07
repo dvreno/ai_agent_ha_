@@ -1,4 +1,4 @@
-"""Config flow for Llama Query integration."""
+"""Config flow for AI Agent HA integration."""
 from __future__ import annotations
 
 import logging
@@ -23,11 +23,13 @@ _LOGGER = logging.getLogger(__name__)
 PROVIDERS = {
     "llama": "Llama",
     "openai": "OpenAI",
+    "anthropic": "Anthropic Claude",
 }
 
 TOKEN_NAMES = {
     "llama": "Llama API Key",
     "openai": "OpenAI API Key",
+    "anthropic": "Anthropic API Key",
 }
 
 DEFAULT_PROVIDER = "llama"
@@ -48,14 +50,14 @@ class AiAgentHaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             try:
                 # Validate the API key by making a test request
                 # You might want to add actual validation here
-                if not user_input.get("llm_token"):
+                if not user_input.get("api_key"):
                     raise InvalidApiKey
 
                 return self.async_create_entry(
                     title=f"AI Agent HA ({PROVIDERS.get(user_input['ai_provider'], user_input['ai_provider'])})",
                     data={
                         "ai_provider": user_input["ai_provider"],
-                        "llm_token": user_input["llm_token"]
+                        "api_key": user_input["api_key"]
                     },
                 )
             except InvalidApiKey:
@@ -68,7 +70,7 @@ class AiAgentHaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required("ai_provider", default=provider): vol.In(list(PROVIDERS.keys())),
-                vol.Required("llm_token"): str,
+                vol.Required("api_key"): str,
             }),
             errors=errors,
             description_placeholders={
@@ -91,17 +93,17 @@ class AiAgentHaOptionsFlowHandler(config_entries.OptionsFlow):
         errors = {}
         provider = user_input.get("ai_provider") if user_input else self.config_entry.data.get("ai_provider", DEFAULT_PROVIDER)
         token_label = TOKEN_NAMES.get(provider, "API Token")
-        default_token = user_input.get("llm_token") if user_input else self.config_entry.data.get("llm_token", "")
+        default_token = user_input.get("api_key") if user_input else self.config_entry.data.get("api_key", "")
 
         if user_input is not None:
-            if not user_input.get("llm_token"):
-                errors["llm_token"] = "required"
+            if not user_input.get("api_key"):
+                errors["api_key"] = "required"
             if not errors:
                 return self.async_create_entry(
                     title="",
                     data={
                         "ai_provider": user_input["ai_provider"],
-                        "llm_token": user_input["llm_token"]
+                        "api_key": user_input["api_key"]
                     }
                 )
 
@@ -109,10 +111,10 @@ class AiAgentHaOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Required("ai_provider", default=provider): vol.In(list(PROVIDERS.keys())),
-                vol.Required("llm_token", default=default_token): str,
+                vol.Required("api_key", default=default_token): str,
             }),
             errors=errors,
             description_placeholders={
                 "token_label": token_label
             }
-        ) 
+        )

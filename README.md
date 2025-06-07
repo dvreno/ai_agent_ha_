@@ -1,7 +1,7 @@
 # AI Agent HA Custom Integration
 > ⚠️ This is an early-stage, proof-of-concept version of the integration. Features and stability may change as development progresses. Use with caution and provide feedback!
 
-A Home Assistant custom component that provides an AI-powered agent capable of generating automations based on natural language queries. The agent connects to all entities in your Home Assistant instance and uses OpenAI's or Llama API to translate user requests into valid Home operations including creating automations for you!
+A Home Assistant custom component that provides an AI-powered agent capable of generating automations based on natural language queries. The agent connects to all entities in your Home Assistant instance and uses OpenAI, Llama, or Anthropic's Claude API to translate user requests into valid Home operations including creating automations for you!
 
 ---
 
@@ -26,7 +26,7 @@ A Home Assistant custom component that provides an AI-powered agent capable of g
 5. Restart Home Assistant.
 6. In the Home Assistant UI, go to **Settings → Devices & Services → Integrations**.
 7. Click **Add Integration** and search for **AI Agent HA**.
-8. Follow the prompts to configure your Llama or OpenAI API key.
+8. Follow the prompts to configure your Llama, OpenAI, or Anthropic API key.
 
 ### Manual Installation
 
@@ -37,7 +37,7 @@ git clone https://github.com/sbenodiz/ai_agent_ha.git
 4. Restart Home Assistant.
 5. In the Home Assistant UI, go to **Settings → Devices & Services → Integrations**.
 6. Click **Add Integration** and search for **AI Agent HA**.
-7. Follow the prompts to configure your Llama or OpenAI API key.
+7. Follow the prompts to configure your Llama, OpenAI, or Anthropic API key.
 
 
 ---
