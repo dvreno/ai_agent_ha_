@@ -149,6 +149,11 @@ class AiAgentHaAgent:
         self._last_request_time = 0
         self._request_count = 0
         self._request_window_start = time.time()
+        # Validate the API key before initializing the client
+        if not self._validate_api_key():
+            _LOGGER.error("Invalid API key provided")
+            raise ValueError("Invalid API key")
+
         provider = config.get("ai_provider", "llama")
         _LOGGER.debug("Initializing AiAgentHaAgent with provider: %s", provider)
         if provider == "openai":
