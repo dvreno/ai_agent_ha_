@@ -35,7 +35,7 @@ TOKEN_NAMES = {
 DEFAULT_PROVIDER = "llama"
 
 class AiAgentHaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Llama Query."""
+    """Handle configuration for AI Agent HA."""
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
