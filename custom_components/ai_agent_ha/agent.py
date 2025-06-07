@@ -1,10 +1,15 @@
 """
 Example config:
 ai_agent_ha:
-ai_provider: openai  # or 'llama' or 'anthropic'
-llama_token: "..."
-openai_token: "..."
-anthropic_token: "..."
+ai_agent_ha:
+  # Pick the provider you’ll use: openai, llama, or anthropic
+  ai_provider: openai
+
+  # Supply one or more tokens as needed
+  openai_token: "YOUR_OPENAI_KEY"
+  llama_token: "YOUR_LLAMA_KEY"        # optional
+  anthropic_token: "YOUR_ANTHROPIC_KEY" # optional
+
 """
 """The AI Agent HA implementation."""
 import logging
