@@ -896,4 +896,4 @@ class AiAgentHaAgent:
             _LOGGER.exception("Error setting entity state: %s", str(e))
             return {
                 "error": f"Error setting entity state: {str(e)}"
-            } 
+            }
