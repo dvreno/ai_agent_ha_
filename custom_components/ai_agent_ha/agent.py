@@ -1,9 +1,8 @@
 """
 Example config:
 ai_agent_ha:
-ai_provider: openai  # or 'llama'
-llama_token: "..."
-openai_token: "..."
+  ai_provider: openai  # or 'llama'
+  api_key: "YOUR_API_KEY"
 """
 """The Llama Query agent implementation."""
 import logging
