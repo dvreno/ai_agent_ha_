@@ -1,4 +1,4 @@
-"""The Llama Query integration."""
+"""The AI Agent HA integration."""
 from __future__ import annotations
 
 import logging
@@ -21,13 +21,13 @@ SERVICE_SCHEMA = vol.Schema({
 })
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Set up the Llama Query component."""
+    """Set up the AI Agent HA component."""
     return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Llama Query from a config entry."""
+    """Set up AI Agent HA from a config entry."""
     try:
-        _LOGGER.debug(f"Llama Query config entry data: {entry.data}")
+        _LOGGER.debug(f"AI Agent HA config entry data: {entry.data}")
         hass.data[DOMAIN] = {
             "agent": AiAgentHaAgent(
                 hass,
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
         }
     except Exception as err:
-        raise ConfigEntryNotReady(f"Error setting up Llama Query: {err}")
+        raise ConfigEntryNotReady(f"Error setting up AI Agent HA: {err}")
 
     async def async_handle_query(call):
         """Handle the query service call."""

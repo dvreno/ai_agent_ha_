@@ -313,7 +313,7 @@ class AiAgentHaPanel extends LitElement {
             `)}
             ${this._isLoading ? html`
               <div class="loading">
-                <span>Llama is thinking</span>
+                <span>AI Agent is thinking</span>
                 <div class="loading-dots">
                   <div class="dot"></div>
                   <div class="dot"></div>
@@ -394,14 +394,14 @@ class AiAgentHaPanel extends LitElement {
     console.debug("AI Agent HA Panel connected");
     if (this.hass) {
       this.hass.connection.subscribeEvents(
-        (event) => this._handleLlamaResponse(event),
+        (event) => this._handleAIResponse(event),
         'ai_agent_ha_response'
       );
     }
   }
 
-  _handleLlamaResponse(event) {
-    console.debug("Received llama response:", event);
+  _handleAIResponse(event) {
+    console.debug("Received AI response:", event);
     this._isLoading = false;
     if (event.data.success) {
       let message = { type: 'assistant', text: event.data.answer };

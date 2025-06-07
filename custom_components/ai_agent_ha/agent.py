@@ -1,11 +1,17 @@
 """
 Example config:
 ai_agent_ha:
-ai_provider: openai  # or 'llama'
-llama_token: "..."
-openai_token: "..."
+ai_agent_ha:
+  # Pick the provider you’ll use: openai, llama, or anthropic
+  ai_provider: openai
+
+  # Supply one or more tokens as needed
+  openai_token: "YOUR_OPENAI_KEY"
+  llama_token: "YOUR_LLAMA_KEY"        # optional
+  anthropic_token: "YOUR_ANTHROPIC_KEY" # optional
+
 """
-"""The Llama Query agent implementation."""
+"""The AI Agent HA implementation."""
 import logging
 import json
 import aiohttp
@@ -84,6 +90,37 @@ class OpenAIClient(BaseAIClient):
                     return choices[0]['message'].get('content', str(data))
                 return str(data)
 
+class AnthropicClient(BaseAIClient):
+    def __init__(self, token):
+        self.token = token
+        self.api_url = "https://api.anthropic.com/v1/messages"
+
+    async def get_response(self, messages, **kwargs):
+        _LOGGER.debug("Making request to Anthropic API")
+        headers = {
+            "x-api-key": self.token,
+            "anthropic-version": "2023-06-01",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": "claude-3-sonnet-20240229",
+            "messages": messages,
+            "max_tokens": 1024,
+            "temperature": 0.7,
+            "top_p": 0.9
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(self.api_url, headers=headers, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+                if resp.status != 200:
+                    error_text = await resp.text()
+                    _LOGGER.error("Anthropic API error %d", resp.status)
+                    raise Exception(f"Anthropic API error {resp.status}")
+                data = await resp.json()
+                content = data.get('content', [])
+                if isinstance(content, list) and content and content[0].get('type') == 'text':
+                    return content[0].get('text', str(data))
+                return str(data)
+
 # === Main Agent ===
 class AiAgentHaAgent:
     """Agent for handling Llama queries with dynamic data requests and multiple AI providers."""
@@ -152,17 +189,19 @@ class AiAgentHaAgent:
         provider = config.get("ai_provider", "llama")
         _LOGGER.debug("Initializing AiAgentHaAgent with provider: %s", provider)
         if provider == "openai":
-            self.ai_client = OpenAIClient(config.get("llm_token"))
+            self.ai_client = OpenAIClient(config.get("api_key"))
+        elif provider == "anthropic":
+            self.ai_client = AnthropicClient(config.get("api_key"))
         else:
-            self.ai_client = LlamaClient(config.get("llm_token"))
+            self.ai_client = LlamaClient(config.get("api_key"))
         _LOGGER.debug("AiAgentHaAgent initialized successfully")
 
     def _validate_api_key(self) -> bool:
         """Validate the API key format."""
-        if not self.config.get("llm_token") or not isinstance(self.config.get("llm_token"), str):
+        if not self.config.get("api_key") or not isinstance(self.config.get("api_key"), str):
             return False
         # Add more specific validation based on your API key format
-        return len(self.config.get("llm_token")) >= 32
+        return len(self.config.get("api_key")) >= 32
 
     def _check_rate_limit(self) -> bool:
         """Check if we're within rate limits."""
@@ -507,8 +546,12 @@ class AiAgentHaAgent:
             # Read current automations.yaml using async executor
             automations_path = self.hass.config.path('automations.yaml')
             try:
+                def _load_automations():
+                    with open(automations_path, 'r') as file:
+                        return yaml.safe_load(file) or []
+
                 current_automations = await self.hass.async_add_executor_job(
-                    lambda: yaml.safe_load(open(automations_path, 'r')) or []
+                    _load_automations
                 )
             except FileNotFoundError:
                 current_automations = []
@@ -523,8 +566,12 @@ class AiAgentHaAgent:
             current_automations.append(automation_entry)
             
             # Write back to file using async executor
+            def _write_automations():
+                with open(automations_path, 'w') as file:
+                    yaml.dump(current_automations, file, default_flow_style=False)
+
             await self.hass.async_add_executor_job(
-                lambda: yaml.dump(current_automations, open(automations_path, 'w'), default_flow_style=False)
+                _write_automations
             )
             
             # Reload automations
@@ -849,4 +896,4 @@ class AiAgentHaAgent:
             _LOGGER.exception("Error setting entity state: %s", str(e))
             return {
                 "error": f"Error setting entity state: {str(e)}"
-            } 
+            }
