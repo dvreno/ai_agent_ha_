@@ -115,4 +115,4 @@ class AiAgentHaOptionsFlowHandler(config_entries.OptionsFlow):
             description_placeholders={
                 "token_label": token_label
             }
-        ) 
+        )
