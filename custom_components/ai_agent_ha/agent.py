@@ -71,7 +71,7 @@ class OpenAIClient(BaseAIClient):
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "gpt-3.5-turbo",
+            "model": "gpt-4o-mini",
             "messages": messages,
             "max_tokens": 2048,
             "temperature": 0.7,
@@ -102,9 +102,18 @@ class AnthropicClient(BaseAIClient):
             "anthropic-version": "2023-06-01",
             "Content-Type": "application/json"
         }
+        system_content = ""
+        formatted_messages = []
+        for msg in messages:
+            if msg.get("role") == "system" and not system_content:
+                system_content = msg.get("content", "")
+            else:
+                formatted_messages.append(msg)
+
         payload = {
             "model": "claude-3-sonnet-20240229",
-            "messages": messages,
+            "system": system_content,
+            "messages": formatted_messages,
             "max_tokens": 1024,
             "temperature": 0.7,
             "top_p": 0.9
@@ -144,7 +153,9 @@ class AiAgentHaAgent:
             "- get_statistics(entity_id): Get sensor statistics\n"
             "- get_scenes(): Get scene configurations\n"
             "- set_entity_state(entity_id, state, attributes?): Set state of an entity (e.g., turn on/off lights, open/close covers)\n"
-            "- create_automation(automation): Create a new automation with the provided configuration\n\n"
+            "- create_automation(automation): Create a new automation with the provided configuration\n"
+            "- create_dashboard(dashboard): Create a Lovelace dashboard with the provided configuration\n"
+            "- create_dashboard_card(dashboard_id, card): Add a card to a dashboard\n\n"
             "You can also create automations when users ask for them. When you detect that a user wants to create an automation. make sure to request first entities so you know the entities ids to trigger on. pay attention that if you want to set specfic days in the autoamtion you should use those days: ['fri', 'mon', 'sat', 'sun', 'thu', 'tue', 'wed'] \n"
             "respond with a JSON object in this format:\n"
             "{\n"
@@ -229,6 +240,21 @@ class AiAgentHaAgent:
         """Store data in cache with timestamp."""
         self._cache[key] = (time.time(), data)
 
+    def _serialize(self, value: Any) -> Any:
+        """Recursively convert values to JSON serializable formats."""
+        if isinstance(value, set):
+            return [self._serialize(v) for v in value]
+        if isinstance(value, list):
+            return [self._serialize(v) for v in value]
+        if isinstance(value, dict):
+            return {k: self._serialize(v) for k, v in value.items()}
+        if hasattr(value, "isoformat"):
+            try:
+                return value.isoformat()
+            except Exception:  # pylint: disable=broad-except
+                pass
+        return value
+
     def _sanitize_automation_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitize automation configuration to prevent injection attacks."""
         sanitized = {}
@@ -257,13 +283,12 @@ class AiAgentHaAgent:
             
             result = {
                 "entity_id": state.entity_id,
-                "state": state.state,
+                "state": self._serialize(state.state),
                 "last_changed": state.last_changed.isoformat() if state.last_changed else None,
                 "friendly_name": state.attributes.get("friendly_name"),
-                "attributes": {k: (v.isoformat() if hasattr(v, 'isoformat') else v) 
-                            for k, v in state.attributes.items()}
+                "attributes": {k: self._serialize(v) for k, v in state.attributes.items()}
             }
-            _LOGGER.debug("Retrieved entity state: %s", json.dumps(result))
+            _LOGGER.debug("Retrieved entity state: %s", json.dumps(result, default=str))
             return result
         except Exception as e:
             _LOGGER.exception("Error getting entity state: %s", str(e))
@@ -591,6 +616,82 @@ class AiAgentHaAgent:
                 "error": f"Error creating automation: {str(e)}"
             }
 
+    async def create_dashboard(self, dashboard_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new Lovelace dashboard configuration."""
+        try:
+            _LOGGER.debug("Creating dashboard with config: %s", json.dumps(dashboard_config))
+
+            if not dashboard_config or "id" not in dashboard_config or "title" not in dashboard_config:
+                return {"error": "Dashboard config requires 'id' and 'title'"}
+
+            dashboards_path = self.hass.config.path('dashboards.yaml')
+            try:
+                def _load_dashboards():
+                    with open(dashboards_path, 'r') as file:
+                        return yaml.safe_load(file) or []
+
+                dashboards = await self.hass.async_add_executor_job(_load_dashboards)
+            except FileNotFoundError:
+                dashboards = []
+
+            if any(d.get('id') == dashboard_config['id'] for d in dashboards):
+                return {"error": f"Dashboard with id '{dashboard_config['id']}' already exists"}
+
+            dashboards.append(dashboard_config)
+
+            def _write_dashboards():
+                with open(dashboards_path, 'w') as file:
+                    yaml.dump(dashboards, file, default_flow_style=False)
+
+            await self.hass.async_add_executor_job(_write_dashboards)
+
+            return {
+                "success": True,
+                "message": f"Dashboard '{dashboard_config['title']}' created successfully"
+            }
+        except Exception as e:
+            _LOGGER.exception("Error creating dashboard: %s", str(e))
+            return {"error": f"Error creating dashboard: {str(e)}"}
+
+    async def create_dashboard_card(self, dashboard_id: str, card_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Add a card to an existing dashboard."""
+        try:
+            _LOGGER.debug(
+                "Adding card to dashboard %s with config: %s",
+                dashboard_id,
+                json.dumps(card_config),
+            )
+
+            dashboards_path = self.hass.config.path('dashboards.yaml')
+            try:
+                def _load_dashboards():
+                    with open(dashboards_path, 'r') as file:
+                        return yaml.safe_load(file) or []
+
+                dashboards = await self.hass.async_add_executor_job(_load_dashboards)
+            except FileNotFoundError:
+                return {"error": "Dashboards file not found"}
+
+            dashboard = next((d for d in dashboards if d.get('id') == dashboard_id), None)
+            if not dashboard:
+                return {"error": f"Dashboard '{dashboard_id}' not found"}
+
+            dashboard.setdefault('cards', []).append(card_config)
+
+            def _write_dashboards():
+                with open(dashboards_path, 'w') as file:
+                    yaml.dump(dashboards, file, default_flow_style=False)
+
+            await self.hass.async_add_executor_job(_write_dashboards)
+
+            return {
+                "success": True,
+                "message": f"Card added to dashboard '{dashboard_id}'"
+            }
+        except Exception as e:
+            _LOGGER.exception("Error creating dashboard card: %s", str(e))
+            return {"error": f"Error creating dashboard card: {str(e)}"}
+
     async def process_query(self, user_query: str) -> Dict[str, Any]:
         """Process a user query with input validation and rate limiting."""
         try:
@@ -697,6 +798,15 @@ class AiAgentHaAgent:
                             elif request_type == "create_automation":
                                 data = await self.create_automation(
                                     parameters.get("automation")
+                                )
+                            elif request_type == "create_dashboard":
+                                data = await self.create_dashboard(
+                                    parameters.get("dashboard")
+                                )
+                            elif request_type == "create_dashboard_card":
+                                data = await self.create_dashboard_card(
+                                    parameters.get("dashboard_id"),
+                                    parameters.get("card")
                                 )
                             else:
                                 data = {"error": f"Unknown request type: {request_type}"}

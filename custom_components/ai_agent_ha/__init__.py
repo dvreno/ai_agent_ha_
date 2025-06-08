@@ -54,9 +54,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         result = await agent.create_automation(call.data.get("automation", {}))
         return result
 
+    async def async_handle_create_dashboard(call):
+        """Handle the create_dashboard service call."""
+        agent = hass.data[DOMAIN]["agent"]
+        result = await agent.create_dashboard(call.data.get("dashboard", {}))
+        return result
+
+    async def async_handle_create_dashboard_card(call):
+        """Handle the create_dashboard_card service call."""
+        agent = hass.data[DOMAIN]["agent"]
+        result = await agent.create_dashboard_card(
+            call.data.get("dashboard_id"), call.data.get("card", {})
+        )
+        return result
+
     # Register services
     hass.services.async_register(DOMAIN, "query", async_handle_query)
     hass.services.async_register(DOMAIN, "create_automation", async_handle_create_automation)
+    hass.services.async_register(DOMAIN, "create_dashboard", async_handle_create_dashboard)
+    hass.services.async_register(DOMAIN, "create_dashboard_card", async_handle_create_dashboard_card)
 
     # Register static path for frontend
     await hass.http.async_register_static_paths([
@@ -108,5 +124,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.services.async_remove(DOMAIN, "query")
     hass.services.async_remove(DOMAIN, "create_automation")
+    hass.services.async_remove(DOMAIN, "create_dashboard")
+    hass.services.async_remove(DOMAIN, "create_dashboard_card")
     hass.data.pop(DOMAIN)
     return True
