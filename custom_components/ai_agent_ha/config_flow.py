@@ -16,7 +16,13 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.const import CONF_NAME
 
-from .const import DOMAIN, CONF_API_KEY, CONF_WEATHER_ENTITY
+from .const import (
+    DOMAIN,
+    CONF_API_KEY,
+    CONF_WEATHER_ENTITY,
+    CONF_MEMORY_FILE,
+    CONF_MEMORY_REFRESH_INTERVAL,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -57,7 +63,9 @@ class AiAgentHaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     title=f"AI Agent HA ({PROVIDERS.get(user_input['ai_provider'], user_input['ai_provider'])})",
                     data={
                         "ai_provider": user_input["ai_provider"],
-                        "api_key": user_input["api_key"]
+                        "api_key": user_input["api_key"],
+                        CONF_MEMORY_REFRESH_INTERVAL: user_input.get(CONF_MEMORY_REFRESH_INTERVAL, 10),
+                        CONF_MEMORY_FILE: user_input.get(CONF_MEMORY_FILE, "ai_agent_ha_memory.json"),
                     },
                 )
             except InvalidApiKey:
@@ -71,6 +79,8 @@ class AiAgentHaConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({
                 vol.Required("ai_provider", default=provider): vol.In(list(PROVIDERS.keys())),
                 vol.Required("api_key"): str,
+                vol.Optional(CONF_MEMORY_REFRESH_INTERVAL, default=10): int,
+                vol.Optional(CONF_MEMORY_FILE, default="ai_agent_ha_memory.json"): str,
             }),
             errors=errors,
             description_placeholders={
@@ -103,7 +113,9 @@ class AiAgentHaOptionsFlowHandler(config_entries.OptionsFlow):
                     title="",
                     data={
                         "ai_provider": user_input["ai_provider"],
-                        "api_key": user_input["api_key"]
+                        "api_key": user_input["api_key"],
+                        CONF_MEMORY_REFRESH_INTERVAL: user_input.get(CONF_MEMORY_REFRESH_INTERVAL, 10),
+                        CONF_MEMORY_FILE: user_input.get(CONF_MEMORY_FILE, "ai_agent_ha_memory.json"),
                     }
                 )
 
@@ -112,6 +124,8 @@ class AiAgentHaOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required("ai_provider", default=provider): vol.In(list(PROVIDERS.keys())),
                 vol.Required("api_key", default=default_token): str,
+                vol.Optional(CONF_MEMORY_REFRESH_INTERVAL, default=10): int,
+                vol.Optional(CONF_MEMORY_FILE, default="ai_agent_ha_memory.json"): str,
             }),
             errors=errors,
             description_placeholders={

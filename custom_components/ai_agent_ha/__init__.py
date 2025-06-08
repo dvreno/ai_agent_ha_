@@ -2,19 +2,22 @@
 from __future__ import annotations
 
 import logging
-import json
-import aiohttp
 import voluptuous as vol
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from homeassistant.util import dt as dt_util
 from homeassistant.components import websocket_api
 from homeassistant.components.frontend import async_register_built_in_panel
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.exceptions import ConfigEntryNotReady
-from .const import DOMAIN, CONF_API_KEY, CONF_WEATHER_ENTITY
+from .const import (
+    DOMAIN,
+    CONF_API_KEY,
+    CONF_WEATHER_ENTITY,
+    CONF_MEMORY_FILE,
+    CONF_MEMORY_REFRESH_INTERVAL,
+)
 from .agent import AiAgentHaAgent
 from homeassistant.components.http import StaticPathConfig
 
