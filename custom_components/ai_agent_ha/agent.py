@@ -806,6 +806,21 @@ class AiAgentHaAgent:
                         # Try to parse the response as JSON
                         response_data = json.loads(response)
                         _LOGGER.debug("Parsed response data: %s", json.dumps(response_data))
+
+                        # If the parsed response is not a dict, treat it as a
+                        # final textual answer instead of structured data.
+                        if not isinstance(response_data, dict):
+                            _LOGGER.debug("Response data is not an object, returning as final answer")
+                            self.conversation_history.append({
+                                "role": "assistant",
+                                "content": response
+                            })
+                            result = {
+                                "success": True,
+                                "answer": str(response_data)
+                            }
+                            self._set_cached_data(cache_key, result)
+                            return result
                         
                         if response_data.get("request_type") == "data_request":
                             # Handle data request
