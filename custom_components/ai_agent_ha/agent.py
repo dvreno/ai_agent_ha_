@@ -229,6 +229,21 @@ class AiAgentHaAgent:
         """Store data in cache with timestamp."""
         self._cache[key] = (time.time(), data)
 
+    def _serialize(self, value: Any) -> Any:
+        """Recursively convert values to JSON serializable formats."""
+        if isinstance(value, set):
+            return [self._serialize(v) for v in value]
+        if isinstance(value, list):
+            return [self._serialize(v) for v in value]
+        if isinstance(value, dict):
+            return {k: self._serialize(v) for k, v in value.items()}
+        if hasattr(value, "isoformat"):
+            try:
+                return value.isoformat()
+            except Exception:  # pylint: disable=broad-except
+                pass
+        return value
+
     def _sanitize_automation_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitize automation configuration to prevent injection attacks."""
         sanitized = {}
@@ -257,13 +272,12 @@ class AiAgentHaAgent:
             
             result = {
                 "entity_id": state.entity_id,
-                "state": state.state,
+                "state": self._serialize(state.state),
                 "last_changed": state.last_changed.isoformat() if state.last_changed else None,
                 "friendly_name": state.attributes.get("friendly_name"),
-                "attributes": {k: (v.isoformat() if hasattr(v, 'isoformat') else v) 
-                            for k, v in state.attributes.items()}
+                "attributes": {k: self._serialize(v) for k, v in state.attributes.items()}
             }
-            _LOGGER.debug("Retrieved entity state: %s", json.dumps(result))
+            _LOGGER.debug("Retrieved entity state: %s", json.dumps(result, default=str))
             return result
         except Exception as e:
             _LOGGER.exception("Error getting entity state: %s", str(e))
