@@ -23,7 +23,6 @@ from datetime import datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 from homeassistant.helpers.event import async_track_time_interval
-from datetime import timedelta
 from .const import (
     DOMAIN,
     CONF_WEATHER_ENTITY,
