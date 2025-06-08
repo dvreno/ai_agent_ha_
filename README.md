@@ -10,6 +10,7 @@ A Home Assistant custom component that provides an AI-powered agent capable of g
 * **Natural Language Automation**: Ask the agent to create automations in plain English.
 * **Entity-Aware**: Automatically discovers and uses your existing Home Assistant entities.
 * **UI Integration**: Manage and approve suggested automations directly from Home Assistant's UI (see screenshot below).
+* **Dashboard Creation**: Build Lovelace dashboards and cards using natural language.
 
 ![AI Agent HA Usage Screenshot](./image/Screenshot.png)
 

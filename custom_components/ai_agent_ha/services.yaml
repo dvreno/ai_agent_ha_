@@ -5,3 +5,26 @@ query:
     prompt:
       description: "The question or instruction to send to the AI Agent."
       example: "Which rooms have lights on?"
+
+create_automation:
+  name: "Create automation"
+  description: "Create an automation from a provided configuration"
+  fields:
+    automation:
+      description: "Automation configuration"
+
+create_dashboard:
+  name: "Create dashboard"
+  description: "Create a Lovelace dashboard from a configuration"
+  fields:
+    dashboard:
+      description: "Dashboard configuration"
+
+create_dashboard_card:
+  name: "Add dashboard card"
+  description: "Add a card to an existing dashboard"
+  fields:
+    dashboard_id:
+      description: "Target dashboard id"
+    card:
+      description: "Card configuration"
