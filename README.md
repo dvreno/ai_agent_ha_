@@ -11,6 +11,7 @@ A Home Assistant custom component that provides an AI-powered agent capable of g
 * **Entity-Aware**: Automatically discovers and uses your existing Home Assistant entities.
 * **UI Integration**: Manage and approve suggested automations directly from Home Assistant's UI (see screenshot below).
 * **Dashboard Creation**: Build Lovelace dashboards and cards using natural language.
+* **Persistent Memory**: Stores entity states, automations and dashboard data between restarts.
 
 ![AI Agent HA Usage Screenshot](./image/Screenshot.png)
 
@@ -45,7 +46,19 @@ git clone https://github.com/sbenodiz/ai_agent_ha.git
 
 ## Configuration
 
-The integration will automatically register a new panel in the sidebar named **AI Agent HA**. No YAML configuration is required. 
+The integration will automatically register a new panel in the sidebar named **AI Agent HA**. No YAML configuration is required.
+
+### Persistent Memory
+
+Starting with this release, the integration keeps a local memory file storing recent entity states, created automations and dashboards. This context is loaded when Home Assistant starts and saved periodically.
+
+Configuration options:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `memory_refresh_interval` | Minutes between automatic memory updates | `10` |
+| `memory_file` | Filename for the stored memory (relative to the Home Assistant config directory) | `ai_agent_ha_memory.json` |
+
 ---
 
 ## Usage

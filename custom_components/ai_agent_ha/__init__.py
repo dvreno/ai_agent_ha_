@@ -14,7 +14,13 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.exceptions import ConfigEntryNotReady
-from .const import DOMAIN, CONF_API_KEY, CONF_WEATHER_ENTITY
+from .const import (
+    DOMAIN,
+    CONF_API_KEY,
+    CONF_WEATHER_ENTITY,
+    CONF_MEMORY_FILE,
+    CONF_MEMORY_REFRESH_INTERVAL,
+)
 from .agent import AiAgentHaAgent
 from homeassistant.components.http import StaticPathConfig
 

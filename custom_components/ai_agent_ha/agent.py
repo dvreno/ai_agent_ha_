@@ -22,7 +22,15 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
-from .const import DOMAIN, CONF_WEATHER_ENTITY
+from homeassistant.helpers.event import async_track_time_interval
+from datetime import timedelta
+from .const import (
+    DOMAIN,
+    CONF_WEATHER_ENTITY,
+    CONF_MEMORY_FILE,
+    CONF_MEMORY_REFRESH_INTERVAL,
+)
+from .memory import MemoryStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -210,6 +218,17 @@ class AiAgentHaAgent:
             self.ai_client = AnthropicClient(config.get("api_key"))
         else:
             self.ai_client = LlamaClient(config.get("api_key"))
+
+        self.memory_store = MemoryStore(
+            hass,
+            config.get(CONF_MEMORY_FILE, "ai_agent_ha_memory.json"),
+        )
+        self._memory_refresh_interval = timedelta(
+            minutes=config.get(CONF_MEMORY_REFRESH_INTERVAL, 10)
+        )
+        hass.async_create_task(self.initialize_memory())
+        async_track_time_interval(hass, self.refresh_memory, self._memory_refresh_interval)
+
         _LOGGER.debug("AiAgentHaAgent initialized successfully")
 
     def _validate_api_key(self) -> bool:
@@ -244,6 +263,34 @@ class AiAgentHaAgent:
     def _set_cached_data(self, key: str, data: Any) -> None:
         """Store data in cache with timestamp."""
         self._cache[key] = (time.time(), data)
+
+    async def initialize_memory(self) -> None:
+        """Load persistent memory and refresh state."""
+        await self.memory_store.load()
+        await self.refresh_memory()
+
+    async def refresh_memory(self, _=None) -> None:
+        """Refresh stored entity states and persist to disk."""
+        try:
+            self.memory_store.data["entities"] = {
+                state.entity_id: {
+                    "state": self._serialize(state.state),
+                    "attributes": {k: self._serialize(v) for k, v in state.attributes.items()},
+                    "last_changed": state.last_changed.isoformat() if state.last_changed else None,
+                }
+                for state in self.hass.states.async_all()
+            }
+            await self.memory_store.save()
+        except Exception as err:  # pylint: disable=broad-except
+            _LOGGER.error("Failed to refresh memory: %s", err)
+
+    async def load_memory(self) -> None:
+        """Public wrapper to load memory."""
+        await self.memory_store.load()
+
+    async def save_memory(self) -> None:
+        """Public wrapper to save memory."""
+        await self.memory_store.save()
 
     def _serialize(self, value: Any) -> Any:
         """Recursively convert values to JSON serializable formats."""
@@ -294,6 +341,8 @@ class AiAgentHaAgent:
                 "attributes": {k: self._serialize(v) for k, v in state.attributes.items()}
             }
             _LOGGER.debug("Retrieved entity state: %s", json.dumps(result, default=str))
+            self.memory_store.data.setdefault("entities", {})[entity_id] = result
+            await self.memory_store.save()
             return result
         except Exception as e:
             _LOGGER.exception("Error getting entity state: %s", str(e))
@@ -609,7 +658,10 @@ class AiAgentHaAgent:
             
             # Clear automation-related caches
             self._cache.clear()
-            
+
+            self.memory_store.data.setdefault("automations", []).append(automation_entry)
+            await self.memory_store.save()
+
             return {
                 "success": True,
                 "message": f"Automation '{automation_entry['alias']}' created successfully"
@@ -649,6 +701,8 @@ class AiAgentHaAgent:
                     yaml.dump(dashboards, file, default_flow_style=False)
 
             await self.hass.async_add_executor_job(_write_dashboards)
+            self.memory_store.data.setdefault("dashboards", []).append(dashboard_config)
+            await self.memory_store.save()
 
             return {
                 "success": True,
@@ -688,6 +742,12 @@ class AiAgentHaAgent:
                     yaml.dump(dashboards, file, default_flow_style=False)
 
             await self.hass.async_add_executor_job(_write_dashboards)
+            self.memory_store.data.setdefault("dashboards", [])
+            for db in self.memory_store.data["dashboards"]:
+                if db.get("id") == dashboard_id:
+                    db.setdefault("cards", []).append(card_config)
+                    break
+            await self.memory_store.save()
 
             return {
                 "success": True,
