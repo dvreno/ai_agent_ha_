@@ -71,7 +71,7 @@ class OpenAIClient(BaseAIClient):
             "Content-Type": "application/json"
         }
         payload = {
-            "model": "gpt-4o-mini",
+            "model": "o4-mini",
             "messages": messages,
             "max_tokens": 2048,
             "temperature": 0.7,
