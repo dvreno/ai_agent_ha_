@@ -22,7 +22,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
-from .const import DOMAIN, CONF_WEATHER_ENTITY
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 

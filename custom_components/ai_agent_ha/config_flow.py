@@ -16,7 +16,7 @@ from homeassistant.helpers.selector import (
 )
 from homeassistant.const import CONF_NAME
 
-from .const import DOMAIN, CONF_API_KEY, CONF_WEATHER_ENTITY
+from .const import DOMAIN, CONF_API_KEY
 
 _LOGGER = logging.getLogger(__name__)
 
