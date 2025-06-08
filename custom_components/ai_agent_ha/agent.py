@@ -144,7 +144,9 @@ class AiAgentHaAgent:
             "- get_statistics(entity_id): Get sensor statistics\n"
             "- get_scenes(): Get scene configurations\n"
             "- set_entity_state(entity_id, state, attributes?): Set state of an entity (e.g., turn on/off lights, open/close covers)\n"
-            "- create_automation(automation): Create a new automation with the provided configuration\n\n"
+            "- create_automation(automation): Create a new automation with the provided configuration\n"
+            "- create_dashboard(dashboard): Create a Lovelace dashboard with the provided configuration\n"
+            "- create_dashboard_card(dashboard_id, card): Add a card to a dashboard\n\n"
             "You can also create automations when users ask for them. When you detect that a user wants to create an automation. make sure to request first entities so you know the entities ids to trigger on. pay attention that if you want to set specfic days in the autoamtion you should use those days: ['fri', 'mon', 'sat', 'sun', 'thu', 'tue', 'wed'] \n"
             "respond with a JSON object in this format:\n"
             "{\n"
@@ -605,6 +607,82 @@ class AiAgentHaAgent:
                 "error": f"Error creating automation: {str(e)}"
             }
 
+    async def create_dashboard(self, dashboard_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a new Lovelace dashboard configuration."""
+        try:
+            _LOGGER.debug("Creating dashboard with config: %s", json.dumps(dashboard_config))
+
+            if not dashboard_config or "id" not in dashboard_config or "title" not in dashboard_config:
+                return {"error": "Dashboard config requires 'id' and 'title'"}
+
+            dashboards_path = self.hass.config.path('dashboards.yaml')
+            try:
+                def _load_dashboards():
+                    with open(dashboards_path, 'r') as file:
+                        return yaml.safe_load(file) or []
+
+                dashboards = await self.hass.async_add_executor_job(_load_dashboards)
+            except FileNotFoundError:
+                dashboards = []
+
+            if any(d.get('id') == dashboard_config['id'] for d in dashboards):
+                return {"error": f"Dashboard with id '{dashboard_config['id']}' already exists"}
+
+            dashboards.append(dashboard_config)
+
+            def _write_dashboards():
+                with open(dashboards_path, 'w') as file:
+                    yaml.dump(dashboards, file, default_flow_style=False)
+
+            await self.hass.async_add_executor_job(_write_dashboards)
+
+            return {
+                "success": True,
+                "message": f"Dashboard '{dashboard_config['title']}' created successfully"
+            }
+        except Exception as e:
+            _LOGGER.exception("Error creating dashboard: %s", str(e))
+            return {"error": f"Error creating dashboard: {str(e)}"}
+
+    async def create_dashboard_card(self, dashboard_id: str, card_config: Dict[str, Any]) -> Dict[str, Any]:
+        """Add a card to an existing dashboard."""
+        try:
+            _LOGGER.debug(
+                "Adding card to dashboard %s with config: %s",
+                dashboard_id,
+                json.dumps(card_config),
+            )
+
+            dashboards_path = self.hass.config.path('dashboards.yaml')
+            try:
+                def _load_dashboards():
+                    with open(dashboards_path, 'r') as file:
+                        return yaml.safe_load(file) or []
+
+                dashboards = await self.hass.async_add_executor_job(_load_dashboards)
+            except FileNotFoundError:
+                return {"error": "Dashboards file not found"}
+
+            dashboard = next((d for d in dashboards if d.get('id') == dashboard_id), None)
+            if not dashboard:
+                return {"error": f"Dashboard '{dashboard_id}' not found"}
+
+            dashboard.setdefault('cards', []).append(card_config)
+
+            def _write_dashboards():
+                with open(dashboards_path, 'w') as file:
+                    yaml.dump(dashboards, file, default_flow_style=False)
+
+            await self.hass.async_add_executor_job(_write_dashboards)
+
+            return {
+                "success": True,
+                "message": f"Card added to dashboard '{dashboard_id}'"
+            }
+        except Exception as e:
+            _LOGGER.exception("Error creating dashboard card: %s", str(e))
+            return {"error": f"Error creating dashboard card: {str(e)}"}
+
     async def process_query(self, user_query: str) -> Dict[str, Any]:
         """Process a user query with input validation and rate limiting."""
         try:
@@ -711,6 +789,15 @@ class AiAgentHaAgent:
                             elif request_type == "create_automation":
                                 data = await self.create_automation(
                                     parameters.get("automation")
+                                )
+                            elif request_type == "create_dashboard":
+                                data = await self.create_dashboard(
+                                    parameters.get("dashboard")
+                                )
+                            elif request_type == "create_dashboard_card":
+                                data = await self.create_dashboard_card(
+                                    parameters.get("dashboard_id"),
+                                    parameters.get("card")
                                 )
                             else:
                                 data = {"error": f"Unknown request type: {request_type}"}
